@@ -1,0 +1,74 @@
+{% extends 'layout.html' %}
+{% block body %}
+
+<h3 class="title">Keithley 2400/2450 Sourcemeter Interface</h3>
+
+<form action = "/" method = "post">
+    <div class = "form-group">
+        <input type = "radio" name = "serial" id = "2400" value = "2400" {% if is_K2400 %} checked {% endif %}>
+        <label for = "2400">2400</label>
+        <input type = "radio" name = "serial" id = "2450" value = "2450" {% if not is_K2400 %} checked {% endif %}>
+        <label for = "2450">2450</label>
+    </div>
+
+    <div class = "form-group">
+        <input type = number name = "GPIB" id = "GPIB" value = {{GPIB}}>
+        <label for = "GPIB">GPIB number</label>
+    </div>
+
+    <div class = "form-group">
+        <input type = number name = "current" id = "current" value = 0>
+        <label for = "current">New current value (mA)</label>
+    </div>
+
+    <button class="btn btn-primary" type="submit">Set new value</button>
+</form>
+
+<!-- chart-->
+<div style="width: 800px; height: 400px;">
+<canvas id="myChart"></canvas>
+</div>
+
+<!-- download csv button -->
+<a href = "/save">
+    <button type="button">Download CSV</button>
+</a>
+
+<!-- script to make chart auto refresh -->
+<script>
+const ctx = document.getElementById('myChart').getContext('2d');
+
+const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: 'Measured Value',
+            data: [],
+            borderColor: 'purple',
+            fill: false
+        }]
+    },
+    options: {
+        animation: false,
+        scales: {
+            x: { title: { display: true, text: 'Time (s)' }},
+            y: { title: { display: true, text: 'Value' }}
+        }
+    }
+});
+
+async function fetchData() {
+    const response = await fetch('/data');
+    const data = await response.json();
+
+    chart.data.labels.push(data.time.toFixed(1));
+    chart.data.datasets[0].data.push(data.value);
+
+    chart.update();
+}
+
+setInterval(fetchData, 1000);
+</script>
+
+{% endblock %}
