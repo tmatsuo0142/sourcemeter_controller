@@ -43,30 +43,26 @@ init_db()
 #update this with measurement command for Keithley
 def measure_value():
     # Example: return instrument.read()
+    #keithley.write(":SENS:FUNC 'CURR'")
+    #keithley.write(":READ?")
     value = random.uniform(0,1)
     return value
 
 @app.route("/",  methods = ["GET", "POST"])
 def index():
+    rm = pyvisa.ResourceManager()
+    list = rm.list_resources()
     if request.method == "POST":
-        print(request.form.get("GPIB"))
-        GPIB = int(request.form.get("GPIB"))
-
-        serial = request.form.get("serial") 
-
-        is_K2400 = bool(serial == "2400")
-        print(is_K2400)
-
-        """
-        if serial == "2400":
-            keithley = K2400(f"GPIB::{GPIB}")
-        elif serial == "2450":
-            keithley = K2450(f"GPIB::{GPIB}")
-        """
+        print(request.form.get("TCPIP"))
+        TCPIP = int(request.form.get("TCPIP"))
+        
+        keithley = rm.open_resource(f"{TCPIP}")
+        
         current = float(request.form.get("current"))/1000
-        #keithley.apply_current(current)
-        return render_template("index.html", GPIB = GPIB, is_K2400 = is_K2400)
-    return render_template("index.html", GPIB = 1, is_K2400 = 1)
+        keithley.write("SOUR:FUNC CURR")
+        keithley.write(f"SOUR:CURR {current}")
+        return render_template("index.html", TCPIP = TCPIP, list = list)
+    return render_template("index.html", TCPIP = 1, list = list)
 
 
 @app.route("/data")
@@ -105,7 +101,7 @@ def save():
 
     # Write data rows
     for row in rows:
-        writer.writerow([row["id"],row["time"], row["current"]])
+        writer.writerow([row["id"], row["time"], row["current"]])
 
     output.seek(0)
 

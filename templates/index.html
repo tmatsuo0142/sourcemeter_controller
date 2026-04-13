@@ -3,17 +3,14 @@
 
 <h3 class="title">Keithley 2400/2450 Sourcemeter Interface</h3>
 
+<h4>List of resources</h4>
+<h5>{{ list }}</h5>
+
 <form action = "/" method = "post">
-    <div class = "form-group">
-        <input type = "radio" name = "serial" id = "2400" value = "2400" {% if is_K2400 %} checked {% endif %}>
-        <label for = "2400">2400</label>
-        <input type = "radio" name = "serial" id = "2450" value = "2450" {% if not is_K2400 %} checked {% endif %}>
-        <label for = "2450">2450</label>
-    </div>
 
     <div class = "form-group">
-        <input type = number name = "GPIB" id = "GPIB" value = {{GPIB}}>
-        <label for = "GPIB">GPIB number</label>
+        <input type = "text" name = "TCPIP" id = "TCPIP" value = {{TCPIP}}>
+        <label for = "TCPIP">TCPIP</label>
     </div>
 
     <div class = "form-group">
