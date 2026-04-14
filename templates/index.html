@@ -55,17 +55,32 @@ const chart = new Chart(ctx, {
     }
 });
 
+async function loadHistory() {
+    const response = await fetch('/history');
+    const history = await response.json();
+
+    console.log("HISTORY RAW:", history);
+
+    chart.data.labels = history.map(p => Number(p.time).toFixed(1));
+    chart.data.datasets[0].data = history.map(p => Number(p.current));
+
+    chart.update();
+}
+
 async function fetchData() {
     const response = await fetch('/data');
     const data = await response.json();
 
     chart.data.labels.push(data.time.toFixed(1));
-    chart.data.datasets[0].data.push(data.value);
+    chart.data.datasets[0].data.push(data.current);
 
-    chart.update();
+    chart.update("none");
 }
 
-setInterval(fetchData, 1000);
+loadHistory().then(() => {
+    setInterval(fetchData, 1000);
+});
+
 </script>
 
 {% endblock %}

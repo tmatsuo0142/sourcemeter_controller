@@ -1,21 +1,23 @@
 from flask import Flask, render_template, request, jsonify, Response
 import pyvisa
-import pymeasure
-from pymeasure.instruments.keithley import Keithley2400 as K2400
-from pymeasure.instruments.keithley import Keithley2450 as K2450
+from pyvisa.errors import VisaIOError
 import time
-import random
 from datetime import datetime
 import sqlite3
 import csv
 import io
+import random
 import os
+import json
 
 app = Flask(__name__)
 
 DATABASE = "database.db"
 
 start_time = time.time()
+
+keithley = None
+
 
 #database helper functions
 def get_db():
@@ -40,29 +42,39 @@ def init_db():
 
 init_db()
 
-#update this with measurement command for Keithley
+#measurement functions
 def measure_value():
     # Example: return instrument.read()
-    #keithley.write(":SENS:FUNC 'CURR'")
-    #keithley.write(":READ?")
-    value = random.uniform(0,1)
-    return value
+    if keithley == None:
+        return 0
+    else:
+        keithley.write(":SENS:FUNC 'CURR'")
+        keithley.write(":READ?")
+        value = keithley.query(':MEAS:CURR?')
+        return value
+    
 
 @app.route("/",  methods = ["GET", "POST"])
 def index():
-    rm = pyvisa.ResourceManager()
-    list = rm.list_resources()
-    if request.method == "POST":
-        print(request.form.get("TCPIP"))
-        TCPIP = int(request.form.get("TCPIP"))
+    try:
+        rm = pyvisa.ResourceManager()
+        list = rm.list_resources()
+        if request.method == "POST":
+            print(request.form.get("TCPIP"))
+            TCPIP = request.form.get("TCPIP")
         
-        keithley = rm.open_resource(f"{TCPIP}")
+            keithley = rm.open_resource(f"{TCPIP}")
         
-        current = float(request.form.get("current"))/1000
-        keithley.write("SOUR:FUNC CURR")
-        keithley.write(f"SOUR:CURR {current}")
-        return render_template("index.html", TCPIP = TCPIP, list = list)
-    return render_template("index.html", TCPIP = 1, list = list)
+            current = float(request.form.get("current"))/1000
+            keithley.write("SOUR:FUNC CURR")
+            keithley.write(f"SOUR:CURR {current}")
+            return render_template("index.html", TCPIP = TCPIP, list = list)
+    
+    
+        return render_template("index.html", TCPIP = 0, list = "list should appear here after entering TCPIP")
+    except VisaIOError:
+        return render_template("index.html", TCPIP = 0, list = "Communication error")
+
 
 
 @app.route("/data")
@@ -79,8 +91,16 @@ def data():
     #update chart
     return jsonify({
         "time": current_time,
-        "value": current
+        "current": current
     })
+
+@app.route('/history')
+def history():
+    db = get_db()
+    rows = db.execute("SELECT time, current FROM chart_data").fetchall()
+    db.close()
+
+    return jsonify([{"time": r["time"], "current": r["current"]} for r in rows])
 
 @app.route("/save")
 def save():
